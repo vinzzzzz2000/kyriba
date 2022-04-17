@@ -1,29 +1,90 @@
-//SPDX-License-Identifier: MIT
-// contracts/ERC721.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
-pragma solidity >=0.6.2;
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/draft-ERC721VotesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+contract MyToken is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721URIStorageUpgradeable, PausableUpgradeable, OwnableUpgradeable, ERC721BurnableUpgradeable, EIP712Upgradeable, ERC721VotesUpgradeable {
+    using CountersUpgradeable for CountersUpgradeable.Counter;
 
-contract NFT is ERC721 {
-  using Counters for Counters.Counter;
-  Counters.Counter private _tokenIds;
+    CountersUpgradeable.Counter private _tokenIdCounter;
 
-  constructor() ERC721("GameItem", "ITM") {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 
-  // commented out unused variable
-  // function awardItem(address player, string memory tokenURI)
-  function awardItem(address player)
-    public
-    returns (uint256)
-  {
-    _tokenIds.increment();
+    function initialize() initializer public {
+        __ERC721_init("MyToken", "KYR");
+        __ERC721Enumerable_init();
+        __ERC721URIStorage_init();
+        __Pausable_init();
+        __Ownable_init();
+        __ERC721Burnable_init();
+        __EIP712_init("MyToken", "1");
+        __ERC721Votes_init();
+    }
 
-    uint256 newItemId = _tokenIds.current();
-    _mint(player, newItemId);
-    // _setTokenURI(newItemId, tokenURI);
+    function pause() public onlyOwner {
+        _pause();
+    }
 
-    return newItemId;
-  }
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
+    function safeMint(address to, string memory uri) public onlyOwner {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal
+        whenNotPaused
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+    {
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    // The following functions are overrides required by Solidity.
+
+    function _afterTokenTransfer(address from, address to, uint256 tokenId)
+        internal
+        override(ERC721Upgradeable, ERC721VotesUpgradeable)
+    {
+        super._afterTokenTransfer(from, to, tokenId);
+    }
+
+    function _burn(uint256 tokenId)
+        internal
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
+    {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
 }
